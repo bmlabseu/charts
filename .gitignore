@@ -1,0 +1,4 @@
+*.tgz
+.cr-oci/
+.cr-release-packages/
+charts/*/charts/

@@ -1,0 +1,29 @@
+ClassicPress {{ .Chart.AppVersion }} has been deployed as {{ include "classicpress.fullname" . }}.
+
+Reach it with:
+{{- if .Values.ingress.enabled }}
+{{- range .Values.ingress.hosts }}
+{{- $scheme := ternary "https" "http" (gt (len $.Values.ingress.tls) 0) }}
+{{- range .paths }}
+  {{ $scheme }}://{{ .host }}{{ .path }}
+{{- end }}
+{{- end }}
+{{- else if eq .Values.service.type "ClusterIP" }}
+  kubectl --namespace {{ .Release.Namespace }} port-forward svc/{{ include "classicpress.fullname" . }} 8080:{{ .Values.service.port }}
+  open http://127.0.0.1:8080
+{{- else if eq .Values.service.type "LoadBalancer" }}
+  kubectl --namespace {{ .Release.Namespace }} get svc {{ include "classicpress.fullname" . }} -w
+{{- else if eq .Values.service.type "NodePort" }}
+  kubectl --namespace {{ .Release.Namespace }} get svc {{ include "classicpress.fullname" . }} -o jsonpath='{.spec.ports[0].nodePort}'
+{{- end }}
+
+The first request runs the ClassicPress installer; the admin account you create there is not managed by this chart.
+
+{{- if not .Values.persistence.enabled }}
+
+WARNING: persistence is disabled. Uploads, plugins and themes are lost when the pod restarts.
+{{- end }}
+{{- if and .Values.mariadb.enabled (not .Values.mariadb.persistence.enabled) }}
+
+WARNING: the bundled MariaDB has persistence disabled. All content is lost when its pod restarts.
+{{- end }}

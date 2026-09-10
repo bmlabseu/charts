@@ -1,0 +1,29 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: {{ include "classicpress.fullname" . }}-test-connection
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "classicpress.labels" . | nindent 4 }}
+  annotations:
+    helm.sh/hook: test
+    helm.sh/hook-delete-policy: before-hook-creation,hook-succeeded
+spec:
+  restartPolicy: Never
+  containers:
+    - name: curl
+      image: curlimages/curl:8.22.0
+      args:
+        - --fail
+        - --show-error
+        - --silent
+        - --output
+        - /dev/null
+        - http://{{ include "classicpress.fullname" . }}:{{ .Values.service.port }}/wp-login.php
+      securityContext:
+        runAsUser: 100
+        runAsNonRoot: true
+        allowPrivilegeEscalation: false
+        capabilities:
+          drop:
+            - ALL

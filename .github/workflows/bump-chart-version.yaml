@@ -1,0 +1,50 @@
+name: Bump chart version
+
+# Dependency bots edit values.yaml but not Chart.yaml; ct lint requires the
+# chart version to increase, so bump it on their branches.
+on:
+  push:
+    branches:
+      - "renovate/**"
+      - "dependabot/**"
+    paths:
+      - "charts/**"
+
+permissions:
+  contents: read
+
+jobs:
+  bump:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Bump the patch version of every changed chart
+        run: |
+          set -euo pipefail
+          bumped=0
+          for chart in $(git diff --name-only origin/main...HEAD -- 'charts/*/**' \
+              | cut -d/ -f1-2 | sort -u); do
+            file="$chart/Chart.yaml"
+            [[ -f "$file" ]] || continue
+            main_version="$(git show "origin/main:$file" 2>/dev/null | yq -r '.version' || echo "")"
+            version="$(yq -r '.version' "$file")"
+            [[ "$version" == "$main_version" ]] || continue
+            IFS=. read -r major minor patch <<< "$version"
+            NEW="$major.$minor.$((patch + 1))" yq -i '.version = strenv(NEW)' "$file"
+            echo "$chart: $version -> $major.$minor.$((patch + 1))"
+            bumped=1
+          done
+          echo "bumped=$bumped" >> "$GITHUB_ENV"
+
+      - name: Commit
+        if: env.bumped == '1'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -am "chore: bump chart version"
+          git push

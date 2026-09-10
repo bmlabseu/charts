@@ -1,0 +1,40 @@
+name: Update ClassicPress version
+
+on:
+  schedule:
+    - cron: "17 6 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Sync appVersion with the upstream image
+        id: sync
+        run: ./scripts/update-classicpress.sh charts/classicpress
+
+      - name: Open pull request
+        if: steps.sync.outputs.updated == 'true'
+        uses: peter-evans/create-pull-request@v8
+        with:
+          branch: chore/classicpress-${{ steps.sync.outputs.version }}
+          commit-message: "feat(classicpress): update ClassicPress to ${{ steps.sync.outputs.version }}"
+          title: "feat(classicpress): update ClassicPress to ${{ steps.sync.outputs.version }}"
+          body: |
+            ClassicPress `${{ steps.sync.outputs.previous_version }}` -> `${{ steps.sync.outputs.version }}`,
+            following the version baked into
+            [`ClassicPress/docker-images`](https://github.com/ClassicPress/docker-images/blob/main/php8.3/Dockerfile).
+
+            Chart version bumped to `${{ steps.sync.outputs.chart_version }}`.
+
+            Release notes: https://github.com/ClassicPress/ClassicPress-release/releases/tag/${{ steps.sync.outputs.version }}
+          labels: dependencies
+          delete-branch: true

@@ -1,0 +1,39 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    "config:recommended",
+    ":semanticCommits",
+    ":enableVulnerabilityAlertsWithLabel(security)"
+  ],
+  "labels": ["dependencies"],
+  "timezone": "Europe/Amsterdam",
+  "schedule": ["before 6am on monday"],
+  "github-actions": { "enabled": false },
+  "packageRules": [
+    {
+      "description": "Rolling PHP-variant tags; appVersion is synced by the update-classicpress workflow instead.",
+      "matchPackageNames": ["docker.io/classicpress/classicpress"],
+      "enabled": false
+    },
+    {
+      "description": "Stay on the MariaDB LTS series.",
+      "matchPackageNames": ["docker.io/mariadb"],
+      "allowedVersions": "<12.0.0"
+    }
+  ],
+  "customManagers": [
+    {
+      "customType": "regex",
+      "managerFilePatterns": ["/^charts/.+/templates/.+\\.yaml$/"],
+      "matchStrings": ["image:\\s+(?<depName>[^\\s:{}]+):(?<currentValue>[^\\s@{}]+)"],
+      "datasourceTemplate": "docker"
+    },
+    {
+      "customType": "regex",
+      "managerFilePatterns": ["/^\\.github/workflows/.+\\.ya?ml$/"],
+      "matchStrings": ["kubeconform/releases/download/(?<currentValue>v[\\d.]+)/"],
+      "depNameTemplate": "yannh/kubeconform",
+      "datasourceTemplate": "github-releases"
+    }
+  ]
+}
